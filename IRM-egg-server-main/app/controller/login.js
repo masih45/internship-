@@ -11,7 +11,6 @@ class LoginController extends Controller {
   // Email Length <= 80
   async register() {
     const { ctx } = this;
-    // Get parameters from frontend
     ctx.body = ctx.request.body;
     ctx.body.type = ctx.body.type.toLowerCase();
     const email = ctx.body.email;
@@ -22,7 +21,6 @@ class LoginController extends Controller {
 
     const server_ref = uuid.v4();
     try {
-      // When email, password or type is empty string
       if (email === '' || password === '' || type === '') {
         throw new Error('Registration Verification Error', { cause: 'Email, Password or User role is empty' });
       }
@@ -31,30 +29,30 @@ class LoginController extends Controller {
         throw new Error('Registration Verification Error', { cause: 'Your email address length is not legal' });
       }
 
-      // When frontend post non email type
       const emailError = validateEmail(email);
       if (!emailError) {
         throw new Error('Registration Verification Error', { cause: 'Invalid email address' });
       }
 
-      // Ensure that students do not mistakenly select "industry" as their type
       if (!email.endsWith('@student.wintec.ac.nz') && type === 'student') {
-        throw new Error('Registration Verification Error', { cause: 'The type selected is student, but your email is not associated with Wintec students. Please check that you have selected the correct type' });
-      } else if (ctx.body.email.endsWith('@student.wintec.ac.nz') && ctx.body.type !== 'student') {
-        throw new Error('Registration Verification Error', { cause: 'Invalid industry selection. Your email is associated with a Wintec student. Please check your selection.' });
+        throw new Error('Registration Verification Error', {
+          cause: 'The type selected is student, but your email is not associated with Wintec students. Please check that you have selected the correct type',
+        });
+      } else if (email.endsWith('@student.wintec.ac.nz') && type !== 'student') {
+        throw new Error('Registration Verification Error', {
+          cause: 'Invalid industry selection. Your email is associated with a Wintec student. Please check your selection.',
+        });
       }
 
-      // If password doesn not meet the requirement
-      // Lowercase + Uppercase letters + numbers, min 8 digits
       const passwordError = validatePassword(password);
       if (!passwordError) {
-        throw new Error('Registration Verification Error', { cause: 'Password must include uppercase, lowercase letters, numbers, special characters, and must be at least 8 characters long' });
+        throw new Error('Registration Verification Error', {
+          cause: 'Password must include uppercase, lowercase letters, numbers, special characters, and must be at least 8 characters long',
+        });
       }
 
-      // Call addUser method from userService
       const users = await this.ctx.service.userService.addUser(ctx.body);
 
-      // Generate verification code / OTP
       const OTP = generateVerificationCode(6);
       const userVerification = {
         app_user_id: users.app_user_id,
@@ -63,58 +61,51 @@ class LoginController extends Controller {
       };
       await this.ctx.service.userService.addUserVerification(userVerification);
       await this.ctx.service.emailService.sendOTP(server_ref);
+
       ctx.status = 200;
       returnMap = { server_ref, description: 'Registration successful and OTP sent' };
+
     } catch (error) {
       console.log(error);
 
       if (error.name === 'SequelizeUniqueConstraintError') {
         ctx.status = 409;
         returnMap = { error: 'Email already registered, Please use another email or Sign In' };
-      } else if (error.name === 'SequelizeConnectionError') {
+      } else if (error.name === 'SequelizeConnectionError' || error.name === 'SequelizeDatabaseError') {
         ctx.status = 500;
         returnMap = { error: 'Something went wrong. Please try again later' };
-      } else if (error.name === 'SequelizeDatabaseError') {
-        ctx.status = 500;
-        returnMap = { error: 'Something went wrong. Please try again later' };
+      } else {
+        switch (error.cause) {
+          case 'Email, Password or User role is empty':
+            ctx.status = 400;
+            returnMap = { error: error.cause };
+            break;
+          case 'Invalid email address':
+            ctx.status = 404;
+            returnMap = { error: error.cause };
+            break;
+          case 'Your email address length is not legal':
+            ctx.status = 403;
+            returnMap = { error: error.cause };
+            break;
+          case 'The type selected is student, but your email is not associated with Wintec students. Please check that you have selected the correct type':
+            ctx.status = 403;
+            returnMap = { error: error.cause };
+            break;
+          case 'Invalid industry selection. Your email is associated with a Wintec student. Please check your selection.':
+            ctx.status = 403;
+            returnMap = { error: error.cause };
+            break;
+          case 'Password must include uppercase, lowercase letters, numbers, special characters, and must be at least 8 characters long':
+            ctx.status = 403;
+            returnMap = { error: error.cause };
+            break;
+          default:
+            ctx.status = 500;
+            returnMap = { error: 'Something went wrong. Please try again later' };
+            break;
+        }
       }
-
-      switch (error.cause) {
-        case 'Email, Password or User role is empty':
-          ctx.status = 400;
-          returnMap = { error: error.cause };
-          break;
-        case 'Invalid email address':
-          ctx.status = 404;
-          returnMap = { error: error.cause };
-          break;
-        case 'Your email address length is not legal':
-          ctx.status = 403;
-          returnMap = { error: error.cause };
-          break;
-        case 'The type selected is student, but your email is not associated with Wintec students. Please check that you have selected the correct type':
-          ctx.status = 403;
-          returnMap = { error: error.cause };
-          break;
-        case 'Invalid industry selection. Your email is associated with a Wintec student. Please check your selection.':
-          ctx.status = 403;
-          returnMap = { error: error.cause };
-          break;
-        case 'Password must include uppercase, lowercase letters, numbers, special characters, and must be at least 8 characters long':
-          ctx.status = 403;
-          returnMap = { error: error.cause };
-          break;
-        default:
-          ctx.status = 500;
-          returnMap = { error: 'Something went wrong. Please try again later' };
-          // returnMap = { error: error.cause };
-          break;
-      }
-
-      // else if (error.name === 'SequelizeDatabaseError') {
-      //   ctx.status = 400;
-      //   returnMap = { error: 'Data truncated for column \'type\'' };
-      // }
     }
     ctx.body = returnMap;
   }
@@ -368,7 +359,7 @@ class LoginController extends Controller {
       const emailError = validateEmail(email);
 
       if (!emailError) {
-        throw new Error('Forgot Password Verification Error', { cause: 'Please provide valid email address' });
+        throw new Error('Forgot Password Verification Error', { cause: 'Please provide a valid email address' });
       }
 
       const users = await this.app.model.ApplicationUser.findOne({
@@ -415,8 +406,8 @@ class LoginController extends Controller {
           ctx.status = 404;
           returnMap = { error: error.cause };
           break;
-        case 'Please provide valid email address':
-          ctx.status = 401;
+        case 'Please provide a valid email address':
+          ctx.status = 400;
           returnMap = { error: error.cause };
           break;
         default:
@@ -430,61 +421,73 @@ class LoginController extends Controller {
   }
   async forgotPasswordVerify() {
     const { ctx } = this;
-
     ctx.body = ctx.request.body;
-    console.log(ctx.body);
     const server_ref = ctx.body.server_ref;
     const OTP = ctx.body.otp;
     const email = ctx.body.email;
     let returnMap = {};
 
     try {
-      // const userVerifications = await this.ctx.service.userService.findUserVerification(ctx.body);
+      // Validate required fields
+      if (!server_ref || !OTP || !email) {
+        throw new Error('Forgot Password Verification Error', {
+          cause: 'server_ref, email or OTP is empty',
+        });
+      }
+
+      // Check if server_ref exists
       const userVerifications = await this.app.model.UserVerification.findOne({
-        where: { server_ref, code: OTP },
+        where: { server_ref },
       });
 
       if (!userVerifications) {
-        throw new Error('Forgot Password Verification Error', { cause: 'server_ref is invalid. It cannot match' });
+        throw new Error('Forgot Password Verification Error', {
+          cause: 'server_ref is invalid. It cannot match',
+        });
       }
 
-      if (OTP === '' || server_ref === '' || email === '') {
-        throw new Error('Forgot Password Verification Error', { cause: 'server_ref, email or OTP is empty' });
+      // Check OTP match
+      if (OTP !== userVerifications.code) {
+        throw new Error('Forgot Password Verification Error', {
+          cause: 'OTP did not match. Please try again',
+        });
       }
 
-      // Check if OTP is expired or not
+      // Check if OTP is expired
       const currentTime = new Date();
       if (userVerifications.expiration_date < currentTime) {
-        throw new Error('Forgot Password Verification Error', { cause: 'Invalid OTP. OTP has expired' });
+        throw new Error('Forgot Password Verification Error', {
+          cause: 'Invalid OTP. OTP has expired',
+        });
       }
 
-      if (OTP === userVerifications.code) {
-        ctx.body = 200;
-        returnMap = { description: 'OTP Matched' };
-      } else {
-        throw new Error('Forgot Password Verification Error', { cause: 'Invalid OTP. Please try again' });
-      }
+      // All checks passed
+      ctx.status = 200;
+      returnMap = { description: 'OTP Matched' };
+
     } catch (error) {
       console.log(error);
+
       if (error.name === 'SequelizeConnectionError') {
         ctx.status = 500;
         returnMap = { error: 'Something went wrong. Please try again later' };
       }
+
       switch (error.cause) {
         case 'server_ref, email or OTP is empty':
           ctx.status = 400;
           returnMap = { error: error.cause };
           break;
-        case 'Invalid OTP. Please try again':
-          ctx.status = 401;
+        case 'OTP did not match. Please try again':
+          ctx.status = 400;
+          returnMap = { error: error.cause };
+          break;
+        case 'server_ref is invalid. It cannot match':
+          ctx.status = 400;
           returnMap = { error: error.cause };
           break;
         case 'Invalid OTP. OTP has expired':
           ctx.status = 410;
-          returnMap = { error: error.cause };
-          break;
-        case 'server_ref is invalid. It cannot match':
-          ctx.status = 401;
           returnMap = { error: error.cause };
           break;
         default:
@@ -512,12 +515,12 @@ class LoginController extends Controller {
       // }
 
       if (password === '') {
-        throw new Error('Forgot Password Verification Error', { cause: 'Please provide password' });
+        throw new Error('Forgot Password Verification Error', { cause: 'Please provide a password' });
       }
 
       const emailError = validateEmail(email);
       if (!emailError) {
-        throw new Error('Forgot Password Verification Error', { cause: 'Please provide valid email address' });
+        throw new Error('Forgot Password Verification Error', { cause: 'Please provide a valid email address' });
       }
 
       const passwordError = validatePassword(password);
@@ -582,11 +585,11 @@ class LoginController extends Controller {
           ctx.status = 401;
           returnMap = { error: error.cause };
           break;
-        case 'Please provide password':
+        case 'Please provide a password':
           ctx.status = 404;
           returnMap = { error: error.cause };
           break;
-        case 'Please provide valid email address':
+        case 'Please provide a valid email address':
           ctx.status = 404;
           returnMap = { error: error.cause };
           break;
