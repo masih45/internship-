@@ -16,13 +16,13 @@
           </div>
         </div>
 
-        <div class="link-item" @mouseover="hover = 'contact-us'" @mouseleave="hover = ''">
-          <div class="link" :class="{ active: hover === 'contact-us' || currentPath === '/contact-us' }">
-            <img src="@/assets/HeaderIcon/contact_us_icon_white.svg" class="icon" v-show="hover === 'contact-us'" />
-            <img src="@/assets/HeaderIcon/contact_us_icon_blue.svg" class="icon" v-show="hover !== 'contact-us'" />
-            <span>Contact Us</span>
-          </div>
-        </div>
+      <div class="link-item" @click="handleRouter('/contact-us')" @mouseover="hover = 'contact-us'" @mouseleave="hover = ''">
+        <div class="link" :class="{ active: hover === 'contact-us' || currentPath === '/contact-us' }">
+          <img src="@/assets/HeaderIcon/contact_us_icon_white.svg" class="icon" v-show="hover === 'contact-us'" />
+          <img src="@/assets/HeaderIcon/contact_us_icon_blue.svg" class="icon" v-show="hover !== 'contact-us'" />
+        <span>Contact Us</span>
+      </div>
+    </div>
 
         <div class="link-item" v-if="isLoggedIn" @mouseover="showMenu" @mouseout="hideMenu" >
           <div class="link">
@@ -39,7 +39,7 @@
             <div @click="handleRouter('/student/profile')">
               <el-text size="small">Profile</el-text>
             </div>
-            <div>
+            <div @click="handleRouter('/contact-us')">
               <el-text size="small">Contact Us</el-text>
             </div>
             <div @click="logOut">

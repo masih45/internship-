@@ -116,6 +116,11 @@ const router = createRouter({
       component: () => import('@/views/HomeView.vue')
     },
     {
+      path: '/contact-us',
+      name: 'contactUs',
+      component: () => import('@/views/ContactUs.vue')
+    },
+    {
       path: '/unauthorized',
       name: 'unauthorized',
       component: () => import('@/views/401View.vue')

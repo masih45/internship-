@@ -135,10 +135,20 @@ class LoginController extends Controller {
 
       // Check if the user is blocked, removed or pending
       if (users.status === 0) {
-        throw new Error('Login Verification Error', { cause: 'Sorry, account need to be actived' });
-      } else if (users.status === 2 || users.status === 3) {
-        throw new Error('Login Verification Error', { cause: 'Sorry, account terminated or temporarily blocked' });
+        const OTP = generateVerificationCode(6);
+        const serverRef = uuid.v4();
+        const updateData = {
+          server_ref: serverRef,
+          code: OTP,
+        };
+        await this.ctx.service.userService.updateUserVerifications(users.app_user_id, updateData);
+        await this.ctx.service.emailService.sendOTP(serverRef);
+
+        ctx.status = 403;
+        ctx.body = { error: 'OTP sent, Email verification required', server_ref: serverRef };
+        return; // ❗ Important: Prevent further login
       }
+
 
       const token = ctx.app.jwt.sign({
         id: users.app_user_id,

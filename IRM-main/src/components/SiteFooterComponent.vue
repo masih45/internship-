@@ -34,7 +34,7 @@
 
       <div style="padding-top: 20px;">
         <div>
-          <el-text style="font-weight: bold;">Contact Us</el-text>
+          <el-text style="font-weight: bold; cursor: pointer;" @click="navigateToContact">Contact Us</el-text>
         </div>
 
         <div class="nav-logo">
@@ -52,10 +52,17 @@
 </template>
 
 <script lang="ts" setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
 const navigate = (url: string) => {
   window.open(url, '_blank')
 }
 
+const navigateToContact = () => {
+  router.push('/contact-us')
+}
 </script>
 
 

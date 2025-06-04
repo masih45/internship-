@@ -1,6 +1,6 @@
 'use strict';
 
-module.exports = (app) => {
+module.exports = app => {
   const { STRING, INTEGER, ENUM, DATE } = app.Sequelize;
 
   const UserVerification = app.model.define(

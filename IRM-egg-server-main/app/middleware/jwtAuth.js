@@ -2,61 +2,70 @@
 
 /**
  * JWT authentication middleware.
- * This middleware validates the JWT token from the request's Authorization header.
- * If the token is valid, it decodes the token and adds the user information to ctx.state for further use.
- * If the token is missing, invalid, or expired, it responds with a 401 status and an appropriate error message.
- *
- * @param {Object} options - Middleware options (can be configured if needed).
- * @return {Function} Middleware function that handles JWT authentication.
+ * Validates JWT signature and expiry, and checks token in the database.
  */
 module.exports = (options) => {
   return async function jwtAuth(ctx, next) {
-    // Retrieve the Authorization token from the request header
+    // Get Authorization header
     const token = ctx.request.headers.authorization;
-    console.log(token);
+    console.log('[AUTH] Incoming Authorization header:', token);
 
-    // If the token is not provided or is incorrectly formatted
     if (!token || !token.startsWith('Bearer ')) {
+      console.log('[AUTH] No token or wrong format.');
       ctx.status = 401;
       ctx.body = { error: 'Authentication failed: No token provided' };
       return;
     }
 
     try {
-      // Extract the actual token by removing the "Bearer " prefix
+      // 1. Extract JWT token
       const authToken = token.split(' ')[1];
-      // Check if the token exists in the database
+      console.log('[AUTH] Extracted token:', authToken);
+
+      // 2. Verify JWT signature and expiry (throws if invalid or expired)
+      const decoded = ctx.app.jwt.verify(authToken, ctx.app.config.jwt.secret);
+      ctx.state.user = decoded; // (Optional) user info in context
+      console.log('[AUTH] Token decoded:', decoded);
+
+      // 3. Optional: Check if token exists in DB and not expired (extra security)
       const authentication_token = await ctx.app.model.AuthenticationToken.findOne({
-        where: {
-          token: authToken,
-        },
+        where: { token: authToken },
       });
-      // If the token is not found in the database
+      console.log('[AUTH] Token record in DB:', authentication_token);
+
       if (!authentication_token) {
+        console.log('[AUTH] Token not found in DB.');
         ctx.status = 401;
         ctx.body = { error: 'Authentication failed: Token mismatch or not found' };
         return;
       }
-      // Validate token expiration date
+
+      // Check DB expiration
       const expiration_date = new Date(authentication_token.expiration_date);
       const current_date = new Date();
+      console.log('[AUTH] Token expiration:', expiration_date, '| Current:', current_date);
 
       if (expiration_date < current_date) {
-        throw new Error('Token Authentication Error', { cause: 'Authentication failed: Invalid or expired token' });
+        console.log('[AUTH] Token expired!');
+        ctx.status = 401;
+        ctx.body = { error: 'Authentication failed: Invalid or expired token' };
+        return;
       }
-      // If validation passes, proceed to the next middleware or controller
+
+      // All checks passed, continue
+      console.log('[AUTH] Token valid, proceeding to next middleware/controller.');
       await next();
     } catch (error) {
-      // Handle JWT validation errors and return 401 status with appropriate error messages
-      switch (error.cause) {
-        case 'Authentication failed: Invalid or expired token':
-          ctx.status = 401;
-          ctx.body = { error: error.cause };
-          break;
-        default:
-          break;
+      console.log('[AUTH] JWT Error:', error);
+      ctx.status = 401;
+      // If it's a JWT error, respond accordingly
+      if (error.name === 'TokenExpiredError') {
+        ctx.body = { error: 'Authentication failed: Token has expired' };
+      } else if (error.name === 'JsonWebTokenError') {
+        ctx.body = { error: 'Authentication failed: Invalid token' };
+      } else {
+        ctx.body = { error: 'Authentication failed: Invalid or expired token' };
       }
     }
   };
 };
-
