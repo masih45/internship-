@@ -12,7 +12,7 @@ module.exports = app => {
       username: STRING(40),
       email: STRING(80),
       password: STRING(225),
-      type: ENUM('Student', 'Client', 'IRM User', 'Admin'),
+      type: ENUM('Student', 'Industry', 'Client', 'IRM User', 'Admin'),
       status: ENUM('Pending', 'Active', 'Blocked', 'Removed'),
       registered_date: DATE,
     },

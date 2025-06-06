@@ -76,7 +76,7 @@ class UserController extends Controller {
         student_type,
       };
 
-      await this.ctx.service.userService.addStudent(student);
+      await this.ctx.model.StudentApplication.create(student);
       ctx.status = 200;
       returnMap = { description: 'Application saved' };
     } catch (error) {
@@ -111,13 +111,23 @@ class UserController extends Controller {
         throw new Error('Get Student Profile Data Error', { cause: 'Please provide user id' });
       }
 
-      const student = await this.app.model.Student.findOne({
-        where: { app_user_id: user_id },
+      const student = await this.app.model.StudentApplication.findOne({
+        where: { application_id: user_id },
       });
 
       if (!student) {
         throw new Error('Get Student Profile Data Error', { cause: 'User is not exist' });
       }
+      // ✅ Debug raw student data
+      console.log('Student from DB:', student.toJSON());
+
+      // ✅ Parse JSON fields (log results for clarity)
+      console.log('Parsed internship_options:', JSON.parse(student.internship_options || '[]'));
+      console.log('Parsed preferred_companies:', JSON.parse(student.preferred_companies || '[]'));
+
+      // Parse JSON string fields
+      student.internship_options = JSON.parse(student.internship_options || '[]');
+      student.preferred_companies = JSON.parse(student.preferred_companies || '[]');
 
       ctx.status = 200;
       returnMap = { student };
@@ -201,6 +211,32 @@ class UserController extends Controller {
     }
 
     ctx.body = returnMap;
+  }
+
+  async getAllApplications() {
+    const { ctx } = this;
+    const token = ctx.request.headers.authorization;
+    const authToken = token.split(' ')[1];
+    const decoded = ctx.app.jwt.verify(authToken, ctx.app.config.jwt.secret);
+
+    try {
+      if (decoded.type !== 'Industry' && decoded.type !== 'Admin') {
+        ctx.status = 403;
+        ctx.body = { error: 'Access denied' };
+        return;
+      }
+
+      const applications = await this.app.model.StudentApplication.findAll({
+        order: [[ 'submission_date', 'DESC' ]],
+      });
+
+      ctx.status = 200;
+      ctx.body = { applications };
+    } catch (error) {
+      console.log(error);
+      ctx.status = 500;
+      ctx.body = { error: 'Something went wrong.' };
+    }
   }
 }
 

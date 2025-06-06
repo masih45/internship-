@@ -27,4 +27,5 @@ module.exports = app => {
   // Get All Student
   router.get('/api/allStudents', controller.user.getAllStudent);
   router.post('/api/forgotPassRequest', controller.user.forgotPassRequest);
+  router.get('/api/allApplications', controller.user.getAllApplications);
 };

@@ -1,8 +1,6 @@
 <template>
   <div class="admin-panel-student-detail-comp">
-
     <div class="header-section">
-
       <div class="header-text">
         <el-text>{{ student.name }}</el-text>
       </div>
@@ -13,7 +11,6 @@
         <img src="@/assets/SocialIcon/github_icon_orange.svg" @click="navigate(student.github_link)" />
         <img src="@/assets/SocialIcon/portfolio_icon_orange.svg" @click="navigate(student.portfolio_link)" />
       </div>
-
     </div>
 
     <div>
@@ -38,12 +35,10 @@
 
         <el-col :span="8">
           <div>
-            <div>
-              <el-text class="attribute" size="large">Student Email</el-text>
-            </div>
-            <div>
-              <el-text class="value" size="large">{{ student.student_email }}</el-text>
-            </div>
+            <el-text class="attribute" size="large">Student Email</el-text>
+          </div>
+          <div>
+            <el-text class="value" size="large">{{ student.student_email }}</el-text>
           </div>
         </el-col>
 
@@ -55,7 +50,6 @@
             <el-text class="value" size="large">{{ student.area_of_study }}</el-text>
           </div>
         </el-col>
-
 
         <el-col :span="8">
           <div>
@@ -84,12 +78,10 @@
           </div>
         </el-col>
 
-
         <el-col :span="8">
           <div>
             <el-text class="attribute" size="large">Second Preference for Placement</el-text>
           </div>
-
           <div>
             <el-text class="value" size="large">Industry Project</el-text>
           </div>
@@ -99,7 +91,6 @@
           <div>
             <el-text class="attribute" size="large">Personal Statement</el-text>
           </div>
-
           <div>
             <el-text class="value" size="large">{{ student.personal_statement }}</el-text>
           </div>
@@ -109,7 +100,6 @@
           <div>
             <el-text class="attribute" size="large">Skills / Experience</el-text>
           </div>
-
           <div>
             <el-text class="value" size="large">{{ student.skills }}</el-text>
           </div>
@@ -119,7 +109,6 @@
           <div>
             <el-text class="attribute" size="large">Favourite Courses</el-text>
           </div>
-
           <div>
             <el-text class="value" size="large">{{ student.favourite_courses }}.</el-text>
           </div>
@@ -129,7 +118,6 @@
           <div>
             <el-text class="attribute" size="large">Two Tutors for Reference</el-text>
           </div>
-
           <div>
             <el-text class="value" size="large">{{ student.reference }}</el-text>
           </div>
@@ -139,9 +127,8 @@
           <div>
             <el-text class="attribute" size="large">Preferred Companies</el-text>
           </div>
-
           <div>
-            <el-text class="value" size="large">{{ student.preferred_companies.replace(/[\[\]"" ]/g, ' ') }}</el-text>
+            <el-text class="value" size="large">{{ student.preferred_companies }}</el-text>
           </div>
         </el-col>
 
@@ -149,14 +136,11 @@
           <div>
             <el-text class="attribute" size="large">Internship Options</el-text>
           </div>
-
           <div>
-            <el-text class="value" size="large">{{ student.internship_options.replace(/[\[\]"" ]/g, ' ') }}</el-text>
+            <el-text class="value" size="large">{{ student.internship_options }}</el-text>
           </div>
         </el-col>
-
       </el-row>
-
     </div>
 
     <div class="footer-section mt-1">
@@ -164,7 +148,6 @@
       <img src="@/assets/SocialIcon/business_analysis_icon.svg">
       <img src="@/assets/SocialIcon/design_icon.svg">
     </div>
-
   </div>
 </template>
 
@@ -178,7 +161,7 @@ const axios: AxiosInstance = inject('$axios') as AxiosInstance
 const authStore = useAuthStore()
 const route = useRoute()
 const authKey = authStore.authKey
-const user_id = route.params.id
+const application_id = route.params.id
 
 const student = reactive({
   name: '',
@@ -209,13 +192,12 @@ const navigate = (url: string) => {
   window.open(url, '_blank')
 }
 
-
 onMounted(() => {
   axios({
     url: '/api/userProfileData',
     method: 'post',
     data: {
-      user_id,
+      user_id: application_id,
     },
     headers: {
       'Content-Type': 'application/json',
@@ -223,8 +205,16 @@ onMounted(() => {
     }
   }).then(res => {
     if (res.data && res.data.student) {
-      console.log(res.data)
-      Object.assign(student, res.data.student)
+      const s = res.data.student
+      Object.assign(student, {
+        ...s,
+        preferred_companies: Array.isArray(s.preferred_companies)
+          ? s.preferred_companies.join(', ')
+          : (JSON.parse(s.preferred_companies || '[]') || []).join(', '),
+        internship_options: Array.isArray(s.internship_options)
+          ? s.internship_options.join(', ')
+          : (JSON.parse(s.internship_options || '[]') || []).join(', ')
+      })
     } else {
       console.log('Response Error')
     }
@@ -238,7 +228,6 @@ onMounted(() => {
     }
   })
 })
-
 </script>
 
 <style scoped>
@@ -268,13 +257,6 @@ onMounted(() => {
   color: black;
 }
 
-.header-text>.el-text:nth-child(2) {
-  font-size: 20px;
-  color: #3A3541;
-  margin-left: 1.5rem;
-}
-
-
 .header-logo>img {
   margin: 0 15px;
   width: 40px;
@@ -299,28 +281,5 @@ onMounted(() => {
 
 .el-col {
   margin-top: 2rem;
-}
-
-.available,
-.unavailable,
-.review {
-  width: 10px;
-  height: 10px;
-  content: '';
-  border-radius: 180px;
-  display: inline-block;
-  margin: 0 10px;
-}
-
-.available {
-  background-color: #09FF5C;
-}
-
-.unavailable {
-  background-color: #FF0808;
-}
-
-.review {
-  background-color: #FE6601;
 }
 </style>

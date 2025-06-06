@@ -3,229 +3,168 @@
     <!-- Breadcrumb navigation -->
     <div>
       <el-breadcrumb separator="/">
-        <!-- Link to the admin homepage -->
         <el-breadcrumb-item :to="{ path: '/adminLayout' }">Homepage</el-breadcrumb-item>
-        <el-breadcrumb-item></el-breadcrumb-item>
+        <el-breadcrumb-item>All Applications</el-breadcrumb-item>
       </el-breadcrumb>
     </div>
 
     <!-- Filter and search section -->
     <div class="select-section mt-3">
-
       <div>
-        <!-- Programme selection dropdown -->
         <el-select v-model="programme" placeholder="Programme" size="large" class="select">
           <el-option v-for="item in programmes" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
 
-        <!-- Specialisation selection dropdown -->
         <el-select v-model="specialisation" placeholder="Specialisation" size="large" class="select">
           <el-option v-for="item in specialisations" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
 
-        <!-- Internship status selection dropdown -->
         <el-select v-model="status" placeholder="Internship Status" size="large" class="select">
           <el-option v-for="item in internshipStatus" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
-
       </div>
 
-      <!-- Search input field -->
       <div>
-        <el-input v-model="input" size="large" placeholder="Type something" :prefix-icon="Search" />
+        <el-input v-model="input" size="large" placeholder="Search by name or email" :prefix-icon="Search" />
       </div>
     </div>
 
-    <!-- Section displaying candidate cards -->
+    <!-- Card grid for student applications -->
     <div class="card-section mt-3">
       <el-row :gutter="20">
-        <!-- Candidate card generated dynamically for each candidate -->
-        <el-col :xl="6" :lg="8" v-for="item in candidates" :key="item.student_id">
-          <CandidateCard :name="item.name" :status="item.intern_status" :cv_link="item.cv_link" :linkedin_link="item.linkedin_link" :github_link="item.github_link" :portfolio_link="item.portfolio_link" :personal_statement="item.personal_statement" :internship_options="item.internship_options" @click="navigate(item.app_user_id)" />
+        <el-col :xl="6" :lg="8" :md="12" :sm="24" :xs="24" v-for="item in filteredStudents" :key="item.student_id">
+          <CandidateCard
+            class="card"
+            :name="item.name"
+            :status="item.intern_status"
+            :cv_link="item.cv_link"
+            :linkedin_link="item.linkedin_link"
+            :github_link="item.github_link"
+            :portfolio_link="item.portfolio_link"
+            :personal_statement="item.personal_statement"
+            :internship_options="item.internship_options"
+            @click="navigate(item.application_id)"
+          />
         </el-col>
       </el-row>
-
     </div>
-
-    <!-- Pagination section -->
-    <div class="pagination-section">
-      <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[100, 200, 300, 400]"
-        :size="size" :disabled="disabled" :background="background" layout="total, sizes, prev, pager, next, jumper"
-        :total="400" class="mt-3 mb-3" />
-    </div>
-
-
   </div>
-
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, inject } from 'vue'
-import CandidateCard from '@/components/StudentCardComponent.vue'
-import { Search } from '@element-plus/icons-vue'
-import type { ComponentSize } from 'element-plus'
+import { ref, onMounted, inject, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
+import { Search } from '@element-plus/icons-vue'
 import type { AxiosInstance } from 'axios'
+import { useRouter } from 'vue-router'
+import CandidateCard from '@/components/StudentCardComponent.vue'
 
-// Injecting Axios instance
 const axios: AxiosInstance = inject('$axios') as AxiosInstance
-// Using the authentication store to retrieve the authorization key
 const authStore = useAuthStore()
 const authKey = authStore.authKey
-// Using Vue Router for navigation
 const router = useRouter()
-// Dropdown selections for programme, specialisation, and internship status
+
 const programme = ref('')
 const specialisation = ref('')
 const status = ref('')
-
-// Search input value
 const input = ref('')
 
-// Programme options for the dropdown
-const programmes = [
-  {
-    value: 'Bachelor',
-    label: 'Bachelor',
-  },
-  {
-    value: 'Postgraduate',
-    label: 'Postgraduate',
-  },
-  {
-    value: 'Master',
-    label: 'Master',
-  }
-]
+const students = ref<any[]>([])
 
-// Specialisation options for the dropdown
-const specialisations = [
-  {
-    value: 'Software Engineering',
-    label: 'Software Engineering',
-  },
-  {
-    value: 'Networking Engineering',
-    label: 'Networing Engineering',
-  },
-  {
-    value: 'Database or Data Analytics',
-    label: 'Database or Data Analytics',
-  }
-]
-
-// Internship status options for the dropdown
-const internshipStatus = [
-  {
-    value: 'For Review',
-    label: 'For Review'
-  },
-  {
-    value: 'Avilable',
-    label: 'Avilable'
-  },
-  {
-    value: 'Placed',
-    label: 'Placed'
-  }
-]
-
-// Function to navigate to a candidate's detailed page
-const navigate = (app_user_id: number) => {
-  router.push({
-    name: 'candidateDetails',
-    params: { id: app_user_id }
-  })
-}
-
-// Pagination settings
-const currentPage = ref(0)
-const pageSize = ref(10)
-const size = ref<ComponentSize>('default')
-const background = ref(true)
-const disabled = ref(false)
-
-// Interface for candidate details
-interface Student {
-  student_id: string
-  app_user_id: number
-  name: string
-  intern_status: number
-  cv_link: string
-  linkedin_link: string
-  github_link: string
-  portfolio_link: string
-  personal_statement: string
-  internship_options: string
-}
-
-// List of candidates fetched from the API
-const candidates = ref<Student[]>([])
-
-// Fetching all students when the component is mounted
 onMounted(() => {
   axios({
-    url: '/api/allStudents',
+    url: '/api/allApplications',
     method: 'get',
     headers: {
       'Authorization': 'Bearer ' + authKey
     }
   }).then(res => {
-    if (res.data && res.data.students) {
-      candidates.value = res.data.students
-      console.log(candidates.value)
-    } else {
-      console.log('Response Error')
+    if (res.data && res.data.applications) {
+      students.value = res.data.applications
     }
-  }).catch(err => {
-    console.log(err)
-    if (err.response) {
-      console.error('Server Error:', err.response.status, err.response.data)
-    } else if (err.request) {
-      console.error('Network Error:', err.request)
-    } else {
-      console.error('Request Error:', err.message)
-    }
-  })
+  }).catch(err => console.error(err))
 })
 
+const programmes = [
+  { value: '', label: 'All Programmes' },
+  { value: 'Bachelor', label: 'Bachelor' },
+  { value: 'Postgraduate', label: 'Postgraduate' },
+  { value: 'Master', label: 'Master' }
+]
 
+const specialisations = [
+  { value: '', label: 'All Specialisations' },
+  { value: 'Software Engineering', label: 'Software Engineering' },
+  { value: 'Networking Engineering', label: 'Networking Engineering' },
+  { value: 'Database or Data Analytics', label: 'Database or Data Analytics' }
+]
+
+const internshipStatus = [
+  { value: '', label: 'All Statuses' },
+  { value: 0, label: 'For Review' },
+  { value: 1, label: 'Available' },
+  { value: 2, label: 'Placed' }
+]
+
+const navigate = (application_id: number) => {
+  router.push({ name: 'candidateDetails', params: { id: application_id } })
+}
+
+const filteredStudents = computed(() => {
+  return students.value.filter(student => {
+    const matchProgramme = !programme.value || student.programme_of_study === programme.value
+    const matchSpecialisation = !specialisation.value || student.area_of_study === specialisation.value
+    const matchStatus = status.value === '' || student.intern_status === status.value
+    const matchInput = !input.value || student.name.toLowerCase().includes(input.value.toLowerCase()) || student.student_email?.toLowerCase().includes(input.value.toLowerCase())
+    return matchProgramme && matchSpecialisation && matchStatus && matchInput
+  })
+})
 </script>
 
 <style scoped>
-
-.mt-3 {
-  margin-top: 3rem;
-}
-
-.mb-3 {
-  margin-bottom: 3rem !important;
-}
-
-.el-col {
-  margin-top: 2rem;
-}
-
 .container {
   background-color: white;
   height: 100%;
+  padding-bottom: 2rem;
 }
 
 .select-section {
   display: flex;
   justify-content: space-between;
-}
-
-.pagination-section {
-  display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .select {
   width: 240px;
   margin-right: 20px;
+  margin-bottom: 10px;
 }
 
+.mt-3 {
+  margin-top: 3rem;
+}
 
+.card-section {
+  margin-top: 2rem;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.card {
+  width: 110%;
+  height: auto;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+  transition: box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  word-wrap: break-word;
+  box-sizing: border-box;
+}
+.card:hover {
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.15);
+}
 </style>
