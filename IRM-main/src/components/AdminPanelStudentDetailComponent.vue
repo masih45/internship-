@@ -191,7 +191,7 @@ const axios: AxiosInstance = inject('$axios') as AxiosInstance
 const authStore = useAuthStore()
 const route = useRoute()
 const authKey = authStore.authKey
-const user_id = route.params.id
+const application_id = route.params.id
 
 const student = reactive({
   name: '',
@@ -227,31 +227,12 @@ onMounted(() => {
   axios({
     url: '/api/userProfileData',
     method: 'post',
-    data: {
-      user_id,
-    },
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + authKey
     }
-  }).then(res => {
-    if (res.data && res.data.student) {
-      console.log(res.data)
-      Object.assign(student, res.data.student)
-    } else {
-      console.log('Response Error')
-    }
-  }).catch(err => {
-    if (err.response) {
-      console.error('Server Error:', err.response.status, err.response.data)
-    } else if (err.request) {
-      console.error('Network Error:', err.request)
-    } else {
-      console.error('Request Error:', err.message)
-    }
   })
 })
-
 </script>
 
 <style scoped>

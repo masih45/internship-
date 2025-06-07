@@ -804,7 +804,7 @@ onMounted(() => {
     method: 'post',
     data: {
       // Send user ID to fetch the profile data
-      user_id: appUID
+      user_id: appUID  // <-- Change this key
     },
     headers: {
       'Content-Type': 'application/json',

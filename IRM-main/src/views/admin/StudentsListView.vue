@@ -165,7 +165,7 @@ interface Student {
 const handleRowClick = (row: Student) => {
   router.push({
     name: 'studentDetails',  // Ensure this route is defined in your router
-    params: { id: item.Application_id }  // Pass the unique ID or other parameter
+    params: { id: row.app_user_id }  // Pass the unique ID or other parameter
   })
 }
 

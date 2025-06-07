@@ -194,39 +194,41 @@ const navigate = (url: string) => {
 
 onMounted(() => {
   axios({
-    url: '/api/userProfileData',
+    url: '/api/userProfileByApplicationId',
     method: 'post',
     data: {
-      user_id: application_id,
+      application_id: application_id,
     },
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + authKey
     }
-  }).then(res => {
-    if (res.data && res.data.student) {
-      const s = res.data.student
-      Object.assign(student, {
-        ...s,
-        preferred_companies: Array.isArray(s.preferred_companies)
-          ? s.preferred_companies.join(', ')
-          : (JSON.parse(s.preferred_companies || '[]') || []).join(', '),
-        internship_options: Array.isArray(s.internship_options)
-          ? s.internship_options.join(', ')
-          : (JSON.parse(s.internship_options || '[]') || []).join(', ')
-      })
-    } else {
-      console.log('Response Error')
-    }
-  }).catch(err => {
-    if (err.response) {
-      console.error('Server Error:', err.response.status, err.response.data)
-    } else if (err.request) {
-      console.error('Network Error:', err.request)
-    } else {
-      console.error('Request Error:', err.message)
-    }
   })
+    .then(res => {
+      if (res.data && res.data.student) {
+        const s = res.data.student
+        Object.assign(student, {
+          ...s,
+          preferred_companies: Array.isArray(s.preferred_companies)
+            ? s.preferred_companies.join(', ')
+            : (JSON.parse(s.preferred_companies || '[]') || []).join(', '),
+          internship_options: Array.isArray(s.internship_options)
+            ? s.internship_options.join(', ')
+            : (JSON.parse(s.internship_options || '[]') || []).join(', ')
+        })
+      } else {
+        console.log('Response Error')
+      }
+    })
+    .catch(err => {
+      if (err.response) {
+        console.error('Server Error:', err.response.status, err.response.data)
+      } else if (err.request) {
+        console.error('Network Error:', err.request)
+      } else {
+        console.error('Request Error:', err.message)
+      }
+    })
 })
 </script>
 

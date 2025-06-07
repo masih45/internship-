@@ -74,6 +74,7 @@ class UserController extends Controller {
         second_preference,
         gender,
         student_type,
+        submission_date: new Date(),
       };
 
       await this.ctx.model.StudentApplication.create(student);
@@ -100,32 +101,26 @@ class UserController extends Controller {
     ctx.body = returnMap;
   }
 
+  // ✅ NEW: Get student profile by user ID (for student profile page)
   async getStudentProfileData() {
     const { ctx } = this;
-    ctx.body = ctx.request.body;
-    const user_id = ctx.body.user_id;
+    const app_user_id = ctx.request.body.user_id;
     let returnMap = {};
 
     try {
-      if (!user_id) {
+      if (!app_user_id) {
         throw new Error('Get Student Profile Data Error', { cause: 'Please provide user id' });
       }
 
       const student = await this.app.model.StudentApplication.findOne({
-        where: { application_id: user_id },
+        where: { app_user_id },
+        order: [[ 'submission_date', 'DESC' ]], // Get the latest application
       });
 
       if (!student) {
-        throw new Error('Get Student Profile Data Error', { cause: 'User is not exist' });
+        throw new Error('Get Student Profile Data Error', { cause: 'User does not exist' });
       }
-      // ✅ Debug raw student data
-      console.log('Student from DB:', student.toJSON());
 
-      // ✅ Parse JSON fields (log results for clarity)
-      console.log('Parsed internship_options:', JSON.parse(student.internship_options || '[]'));
-      console.log('Parsed preferred_companies:', JSON.parse(student.preferred_companies || '[]'));
-
-      // Parse JSON string fields
       student.internship_options = JSON.parse(student.internship_options || '[]');
       student.preferred_companies = JSON.parse(student.preferred_companies || '[]');
 
@@ -137,7 +132,45 @@ class UserController extends Controller {
       returnMap = { error: error.cause || 'Something went wrong. Please try again later' };
 
       if (error.cause === 'Please provide user id') ctx.status = 400;
-      if (error.cause === 'User is not exist') ctx.status = 404;
+      if (error.cause === 'User does not exist') ctx.status = 404;
+    }
+
+    ctx.body = returnMap;
+  }
+
+
+  // ✅ NEW: Get student profile by application_id (for admin/client panel)
+  async getStudentProfileByApplicationId() {
+    const { ctx } = this;
+    ctx.body = ctx.request.body;
+    const application_id = ctx.body.application_id;
+    let returnMap = {};
+
+    try {
+      if (!application_id) {
+        throw new Error('Missing application ID', { cause: 'Please provide application id' });
+      }
+
+      const student = await this.app.model.StudentApplication.findOne({
+        where: { application_id },
+      });
+
+      if (!student) {
+        throw new Error('Student not found', { cause: 'No application with this ID' });
+      }
+
+      student.internship_options = JSON.parse(student.internship_options || '[]');
+      student.preferred_companies = JSON.parse(student.preferred_companies || '[]');
+
+      ctx.status = 200;
+      returnMap = { student };
+    } catch (error) {
+      console.log(error);
+      ctx.status = 500;
+      returnMap = { error: error.cause || 'Something went wrong. Please try again later' };
+
+      if (error.cause === 'Please provide application id') ctx.status = 400;
+      if (error.cause === 'No application with this ID') ctx.status = 404;
     }
 
     ctx.body = returnMap;
@@ -168,7 +201,6 @@ class UserController extends Controller {
     ctx.body = returnMap;
   }
 
-  // ✅ Forgot password CAPTCHA-protected endpoint
   async forgotPassRequest() {
     const { ctx } = this;
     const { email, recaptcha } = ctx.request.body;
@@ -201,7 +233,6 @@ class UserController extends Controller {
         return;
       }
 
-      // ✅ Replace this with your real reset logic
       ctx.status = 200;
       returnMap = { description: 'Reset password instructions sent!', server_ref: 'mock-ref-123' };
     } catch (error) {

@@ -13,7 +13,7 @@
         <div class="profile-bar">
           <el-text class="profile-bar-text">To edit your profile, go to&nbsp;</el-text>
           <el-text class="profile-bar-text" style="text-decoration: underline; cursor: pointer;"
-            @click="handleNavigation('/student/application')">Application&nbsp;</el-text>
+            @click="handleNavigation('/student/application?mode=edit')">Application&nbsp;</el-text>
           <el-text class="profile-bar-text">and edit your application form.</el-text>
         </div>
       </div>
