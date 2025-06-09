@@ -23,6 +23,14 @@
             <el-text class="value" size="large">{{ student.programme_of_study }}</el-text>
           </div>
         </el-col>
+        <el-col :span="8">
+          <div>
+            <el-text class="attribute" size="large">Student ID</el-text>
+          </div>
+          <div>
+            <el-text class="value" size="large">{{ student.wintec_id }}</el-text>
+          </div>
+        </el-col>
 
         <el-col :span="8">
           <div>

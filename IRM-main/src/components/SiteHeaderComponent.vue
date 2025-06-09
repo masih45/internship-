@@ -15,39 +15,40 @@
             <span>Application</span>
           </div>
         </div>
+        <div class="link-item" @click="handleRouter('/student/submitted')" @mouseover="hover = 'submitted'" @mouseleave="hover = ''">
+          <div class="link" :class="{ active: hover === 'submitted' || currentPath.startsWith('/student/submitted') }">
+            <img src="@/assets/HeaderIcon/submitted.svg" class="icon" v-show="hover === 'submitted' || currentPath === '/student/submitted'" />
+            <img src="@/assets/HeaderIcon/submitted.svg" class="icon" v-show="currentPath !== '/student/submitted' && hover !== 'submitted'" />
+            <span>Applied Applications</span>
+        </div>
+      </div>
 
-      <div class="link-item" @click="handleRouter('/contact-us')" @mouseover="hover = 'contact-us'" @mouseleave="hover = ''">
-        <div class="link" :class="{ active: hover === 'contact-us' || currentPath === '/contact-us' }">
-          <img src="@/assets/HeaderIcon/contact_us_icon_white.svg" class="icon" v-show="hover === 'contact-us'" />
-          <img src="@/assets/HeaderIcon/contact_us_icon_blue.svg" class="icon" v-show="hover !== 'contact-us'" />
+      <div class="link-item" @click="handleRouter('/student/contact-us')" @mouseover="hover = 'contact-us'" @mouseleave="hover = ''">
+      <div class="link" :class="{ active: hover === 'contact-us' || currentPath.startsWith('/student/contact-us') }">
+        <img src="@/assets/HeaderIcon/contact_us_icon_white.svg" class="icon" v-show="hover === 'contact-us'" />
+        <img src="@/assets/HeaderIcon/contact_us_icon_blue.svg" class="icon" v-show="hover !== 'contact-us'" />
         <span>Contact Us</span>
       </div>
     </div>
 
-        <div class="link-item" v-if="isLoggedIn" @mouseover="showMenu" @mouseout="hideMenu" >
-          <div class="link">
-            <img src="@/assets/HeaderIcon/sign_in_icon_blue.svg" class="icon" />
-            <span>{{ username }}</span>
-          </div>
-          <div class="sub-menu" v-show="showSubMenu">
-            <div @click="handleRouter('/student/home')">
-              <el-text size="small">Home</el-text>
+        <div v-if="isLoggedIn">
+          <div class="link-item" @mouseover="showMenu" @mouseout="hideMenu">
+            <div class="link">
+              <img src="@/assets/HeaderIcon/sign_in_icon_blue.svg" class="icon" />
+              <span>{{ username }}</span>
             </div>
-            <div @click="handleRouter('/student/application')">
-              <el-text size="small">Application</el-text>
-            </div>
-            <div @click="handleRouter('/student/profile')">
-              <el-text size="small">Profile</el-text>
-            </div>
-            <div @click="handleRouter('/contact-us')">
-              <el-text size="small">Contact Us</el-text>
-            </div>
-            <div @click="logOut">
-              <el-text size="small">Log Out</el-text>
+            <div class="sub-menu" v-show="showSubMenu">
+              <div class="sub-menu-item" @click="handleRouter('/student/home')">Home</div>
+              <div class="sub-menu-item" @click="handleRouter('/student/application')">Application</div>
+              <div class="sub-menu-item" @click="handleRouter('/student/submitted')">Applied Applications</div>
+              <div class="sub-menu-item" @click="handleRouter('/student/profile')">Profile</div>
+              <div class="sub-menu-divider"></div>
+              <div class="sub-menu-item" @click="handleRouter('/student/contact-us')">Contact Us</div>
+              <div class="sub-menu-divider"></div>
+              <div class="sub-menu-item logout" @click="logOut">Log Out</div>
             </div>
           </div>
         </div>
-
         <div class="link-item active" v-else @click="handleRouter('/login')">
           <div class="link">
             <img src="@/assets/HeaderIcon/sign_in_icon_white.svg" class="icon" />
@@ -235,4 +236,41 @@ header {
   }
 
 }
+.sub-menu {
+  background: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 10px 0;
+  border-radius: 8px;
+  min-width: 180px;
+  font-size: 14px;
+}
+
+.sub-menu-label {
+  font-weight: bold;
+  padding: 6px 16px;
+  color: #1e5192;
+  font-size: 13px;
+}
+
+.sub-menu-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sub-menu-item:hover {
+  background-color: #f2f6fc;
+  color: #1e5192;
+}
+
+.sub-menu-divider {
+  border-top: 1px solid #e0e0e0;
+  margin: 8px 0;
+}
+
+.logout {
+  color: #d32f2f;
+  font-weight: bold;
+}
+
 </style>

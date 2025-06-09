@@ -13,7 +13,10 @@ module.exports = app => {
       email: STRING(80),
       password: STRING(225),
       type: ENUM('Student', 'Industry', 'Client', 'IRM User', 'Admin'),
-      status: ENUM('Pending', 'Active', 'Blocked', 'Removed'),
+      status: {
+        type: ENUM('Pending', 'Active', 'Blocked', 'Removed'),
+        defaultValue: 'Pending',
+      },
       registered_date: DATE,
     },
     {

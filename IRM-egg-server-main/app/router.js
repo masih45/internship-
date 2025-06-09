@@ -30,5 +30,6 @@ module.exports = app => {
   router.get('/api/allApplications', controller.user.getAllApplications);
 
   router.post('/api/userProfileByApplicationId', controller.user.getStudentProfileByApplicationId);
+  router.post('/api/userSubmittedApplications', controller.user.getSubmittedApplications);
 
 };

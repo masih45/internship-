@@ -134,19 +134,24 @@ class LoginController extends Controller {
       }
 
       // Check if the user is blocked, removed or pending
-      if (users.status === 0) {
-        const OTP = generateVerificationCode(6);
-        const serverRef = uuid.v4();
-        const updateData = {
-          server_ref: serverRef,
-          code: OTP,
-        };
-        await this.ctx.service.userService.updateUserVerifications(users.app_user_id, updateData);
-        await this.ctx.service.emailService.sendOTP(serverRef);
-
+      if (users.status !== 'Active') {
         ctx.status = 403;
-        ctx.body = { error: 'OTP sent, Email verification required', server_ref: serverRef };
-        return; // ❗ Important: Prevent further login
+        returnMap = { error: 'Your account is not active. Please verify your email or contact support.' };
+
+        if (users.status === 'Pending') {
+          const OTP = generateVerificationCode(6);
+          const serverRef = uuid.v4();
+          const updateData = {
+            server_ref: serverRef,
+            code: OTP,
+          };
+          await this.ctx.service.userService.updateUserVerifications(users.app_user_id, updateData);
+          await this.ctx.service.emailService.sendOTP(serverRef);
+          returnMap = { error: 'OTP sent, Email verification required', server_ref: serverRef };
+        }
+
+        ctx.body = returnMap;
+        return;
       }
 
 
@@ -263,11 +268,12 @@ class LoginController extends Controller {
       // If pass, update user verification & application user status
       // status: 1 - Active
       const updatedData = {
-        status: 1,
+        status: 'Inactive',
         updated_date: new Date(),
       };
       await userVerifications.update(updatedData);
-      await this.ctx.service.userService.updateUser(userVerifications.app_user_id, { status: 1 });
+      await this.ctx.service.userService.updateUser(userVerifications.app_user_id, { status: 'Active' });
+      console.log('User status updated to Active');
       ctx.status = 200;
       returnMap = { description: 'Email verification successful. Please Sign In' };
     } catch (error) {
@@ -395,6 +401,7 @@ class LoginController extends Controller {
       const updateData = {
         code: OTP,
         expiration_date: expirationDate,
+        status: 'Active',
       };
       await userVerifications.update(updateData);
       await this.ctx.service.emailService.sendOTP(userVerifications.server_ref);
@@ -432,51 +439,65 @@ class LoginController extends Controller {
   async forgotPasswordVerify() {
     const { ctx } = this;
     ctx.body = ctx.request.body;
+
     const server_ref = ctx.body.server_ref;
     const OTP = ctx.body.otp;
     const email = ctx.body.email;
+
     let returnMap = {};
 
     try {
-      // Validate required fields
+      // 1. Validate required fields
       if (!server_ref || !OTP || !email) {
         throw new Error('Forgot Password Verification Error', {
           cause: 'server_ref, email or OTP is empty',
         });
       }
 
-      // Check if server_ref exists
-      const userVerifications = await this.app.model.UserVerification.findOne({
-        where: { server_ref },
+      // 2. Find verification record by server_ref
+      const userVerification = await this.app.model.UserVerification.findOne({
+        where: { server_ref, code: OTP, status: 1 },
       });
 
-      if (!userVerifications) {
+      if (!userVerification) {
         throw new Error('Forgot Password Verification Error', {
-          cause: 'server_ref is invalid. It cannot match',
+          cause: 'Invalid OTP or server_ref',
         });
       }
 
-      // Check OTP match
-      if (OTP !== userVerifications.code) {
-        throw new Error('Forgot Password Verification Error', {
-          cause: 'OTP did not match. Please try again',
-        });
-      }
-
-      // Check if OTP is expired
+      // 3. Check if OTP is expired
       const currentTime = new Date();
-      if (userVerifications.expiration_date < currentTime) {
+      if (userVerification.expiration_date < currentTime) {
+        // Invalidate OTP
+        await userVerification.update({ status: 'Inactive' });
         throw new Error('Forgot Password Verification Error', {
           cause: 'Invalid OTP. OTP has expired',
         });
       }
 
-      // All checks passed
+      // 4. Fetch user by app_user_id
+      const user = await this.app.model.ApplicationUser.findOne({
+        where: { app_user_id: userVerification.app_user_id },
+      });
+
+      if (!user || user.email !== email) {
+        // Invalidate OTP
+        await userVerification.update({ status: 'Inactive' });
+        throw new Error('Forgot Password Verification Error', {
+          cause: 'Invalid email. Please try again',
+        });
+      }
+
+      // ✅ Success
       ctx.status = 200;
       returnMap = { description: 'OTP Matched' };
 
     } catch (error) {
-      console.log(error);
+      console.error('Verification failed:', {
+        message: error.message,
+        cause: error.cause,
+        stack: error.stack,
+      });
 
       if (error.name === 'SequelizeConnectionError') {
         ctx.status = 500;
@@ -488,12 +509,12 @@ class LoginController extends Controller {
           ctx.status = 400;
           returnMap = { error: error.cause };
           break;
-        case 'OTP did not match. Please try again':
-          ctx.status = 400;
+        case 'Invalid OTP or server_ref':
+          ctx.status = 401;
           returnMap = { error: error.cause };
           break;
-        case 'server_ref is invalid. It cannot match':
-          ctx.status = 400;
+        case 'Invalid email. Please try again':
+          ctx.status = 401;
           returnMap = { error: error.cause };
           break;
         case 'Invalid OTP. OTP has expired':
@@ -548,6 +569,10 @@ class LoginController extends Controller {
       if (!users) {
         throw new Error('Forgot Password Verification Error', { cause: 'Email address did not match' });
       }
+      console.log('Finding userVerification with:', {
+        server_ref,
+        app_user_id: users.app_user_id,
+      });
 
       const userVerifications = await this.app.model.UserVerification.findOne({
         where: {
@@ -556,19 +581,27 @@ class LoginController extends Controller {
         },
       });
 
-      console.log(userVerifications);
       if (!userVerifications) {
         throw new Error('Forgot Password Verification Error', { cause: 'Invalid server_ref. Please try again' });
       }
 
-      // Check if OTP is expired or not
       const currentTime = new Date();
+      console.log('Current:', currentTime);
+      console.log('Expires:', userVerifications.expiration_date);
+
+      // ✅ Check expiration
       if (userVerifications.expiration_date < currentTime) {
+        await userVerifications.update({ status: 'Inactive' });
+        throw new Error('Forgot Password Verification Error', { cause: 'Invalid OTP. OTP has expired' });
+      }
+
+      // ✅ Check if it's still active
+      if (userVerifications.status !== 'Active') {
         throw new Error('Forgot Password Verification Error', { cause: 'Invalid OTP. OTP has expired' });
       }
 
       if (otp !== userVerifications.code) {
-        throw new Error('Forgot Password Verification Error', { error: 'Invalid OTP. Please try again' });
+        throw new Error('Forgot Password Verification Error', { cause: 'Invalid OTP. Please try again' });
       }
 
       // Update Password
@@ -577,6 +610,7 @@ class LoginController extends Controller {
       };
 
       await users.update(updateData);
+      await userVerifications.update({ status: 'Inactive' }); // ✅ Invalidate OTP after use
       ctx.status = 200;
       returnMap = { description: 'Password changing successful. Please Sign In' };
 

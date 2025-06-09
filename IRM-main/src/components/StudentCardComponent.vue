@@ -83,10 +83,23 @@ const navigate = (url: string) => {
 }
 
 .container {
-  height: 800px;
+  height: 500px; /* or use min-height: 800px; if content might grow */
   width: 400px;
-  border: #e3e3e3 2px solid;
-  padding: 15px 30px;
+  border: 1px solid #e3e3e3;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Optional: Hover effect for interactive cards */
+.container:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .header-section {

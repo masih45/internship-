@@ -5,6 +5,7 @@
 
       <div class="header-text">
         <el-text>{{ student.name }}</el-text>
+        
 
         <div v-if="student.intern_status === 1">
           <el-text>Internship Status</el-text>

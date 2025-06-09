@@ -175,6 +175,45 @@ class UserController extends Controller {
 
     ctx.body = returnMap;
   }
+  // ✅ New: Get all submitted applications by the logged-in student
+  async getSubmittedApplications() {
+    const { ctx } = this;
+    const token = ctx.request.headers.authorization;
+    let returnMap = {};
+
+    try {
+      if (!token) {
+        ctx.status = 401;
+        returnMap = { error: 'Missing token' };
+        ctx.body = returnMap;
+        return;
+      }
+
+      const authToken = token.split(' ')[1];
+      const decoded = ctx.app.jwt.verify(authToken, ctx.app.config.jwt.secret);
+
+      if (decoded.type !== 'Student') {
+        ctx.status = 403;
+        returnMap = { error: 'Only students can access their applications' };
+        ctx.body = returnMap;
+        return;
+      }
+
+      const applications = await ctx.model.StudentApplication.findAll({
+        where: { app_user_id: decoded.id },
+        order: [[ 'submission_date', 'DESC' ]],
+      });
+
+      ctx.status = 200;
+      returnMap = { applications };
+    } catch (error) {
+      console.log('getSubmittedApplications error:', error);
+      ctx.status = 500;
+      returnMap = { error: 'Something went wrong' };
+    }
+
+    ctx.body = returnMap;
+  }
 
   async getAllStudent() {
     const { ctx } = this;

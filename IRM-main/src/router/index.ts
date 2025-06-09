@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// history: createWebHistory(import.meta.env.BASE_URL),
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -16,9 +15,6 @@ const router = createRouter({
         {
           path: '/login',
           name: 'login',
-          // route level code-splitting
-          // this generates a separate chunk (About.[hash].js) for this route
-          // which is lazy-loaded when the route is visited.
           component: () => import('@/views/login/LoginView.vue')
         },
         {
@@ -68,6 +64,16 @@ const router = createRouter({
           path: '/student/profile',
           name: 'studentProfile',
           component: () => import('@/views/student/ProfileView.vue'),
+        },
+        {
+          path: '/student/contact-us',
+          name: 'studentContactUs',
+          component: () => import('@/views/ContactUs.vue')
+        },
+        {
+          path: '/student/submitted',
+          name: 'SubmittedApplications',
+          component: () => import('@/views/student/SubmittedApplications.vue')
         }
       ]
     },
@@ -86,7 +92,6 @@ const router = createRouter({
           path: '/admin/studentsList/:id',
           name: 'studentDetails',
           component: () => import('@/views/admin/StudentsDetailsView.vue'),
-          // Allow Router Parameter
           props: true
         }
       ]
@@ -116,9 +121,10 @@ const router = createRouter({
       component: () => import('@/views/HomeView.vue')
     },
     {
-      path: '/contact-us',
-      name: 'contactUs',
-      component: () => import('@/views/ContactUs.vue')
+      path: '/student/submitted/:id',
+      name: 'submittedStudentDetail',
+      component: () => import('@/views/student/StudentDetailDisplay.vue'),
+      props: true
     },
     {
       path: '/unauthorized',
